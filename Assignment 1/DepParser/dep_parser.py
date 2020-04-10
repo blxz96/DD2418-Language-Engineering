@@ -225,7 +225,7 @@ class Parser:
 
         # There are 2 different cases for choosing RA:
         # For the 1st case, 2 conditions must be met: 
-        # i.  After the execution of RA, umber of correct matches + 1 AND
+        # i.  After the execution of RA, number of correct matches + 1 AND
         # ii. All of the dependents of topmost word has been assigned, i.e. number of occurrence of topmost word in pred_tree = correct_tree 
         # For the second case, just need to fulfil one condition
         # pred_tree == correct_tree
