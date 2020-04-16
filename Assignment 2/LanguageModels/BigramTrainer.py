@@ -103,6 +103,7 @@ class BigramTrainer(object):
             no_token1 = self.unigram_count[self.word[k[0]]] # number of the first token
             if no_token1 != 0:
                 bigram_probability_ln = format(math.log(v/no_token1),'.15f') # v = freq of bigram
+            # can actually comment out else since it won't be reachable anyway as no_token1 will always be != 0    
             else:
                 bigram_probability_ln = format(0,'.15f')
             rows_to_print.append(str(k[0]) + " " + str(k[1]) + " " + str(bigram_probability_ln))
