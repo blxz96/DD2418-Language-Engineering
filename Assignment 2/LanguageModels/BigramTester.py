@@ -40,7 +40,10 @@ class BigramTester(object):
         # Important that it is named self.logProb for the --check flag to work
         self.logProb = 0
 
-        # The identifier of the previous word processed in the test corpus. Is -1 if the last word was unknown.
+        # The identifier of the previous word processed in the test corpus. 
+        # Is -1 if the last word was unknown. 2 cases:
+        # 1. no previous word processed
+        # 2. token in the test corpus could not be found in the training model
         self.last_index = -1
 
         # The fraction of the probability mass given to unknown words.
@@ -68,14 +71,75 @@ class BigramTester(object):
             with codecs.open(filename, 'r', 'utf-8') as f:
                 self.unique_words, self.total_words = map(int, f.readline().strip().split(' '))
                 # YOUR CODE HERE
+                # Algorithm:
+                # For the next V lines, read in an identifier, a token and the number of times the token appears in the corpus
+                # no. of V lines is represented as self.unique_words
+
+                for i in range(self.unique_words):
+                    id , token , no_times = f.readline().strip().split(' ')
+                    id, noTimes = map(int, (id, no_times))
+                    self.index[token] = id
+                    self.word[id] = token
+                    self.unigram_count[token] = no_times
+
+                # The length of the rest of the lines - 1 = number of bigram
+                # This is because the last line in the .txt file is just '-1'
+
+                restLines = f.readlines() # will return a list
+                no_bigrams = len(restLines) - 1
+                for i in range(no_bigrams):
+                    token1 , token2 , bigram_logProb = restLines[i].strip().split(' ')
+                    token1 , token2 = map(int, (token1, token2))
+                    bigram_logProb = float(bigram_logProb)
+                    self.bigram_prob[(token1,token2)] = bigram_logProb
+
                 return True
         except IOError:
-            print("Couldn't find bigram probabilities file {}".format(filename))
+            print("Couldn't find bigram probabilities file {}".format(filename)) 
             return False
 
 
     def compute_entropy_cumulatively(self, word):
         # YOUR CODE HERE
+
+        # Note1: Entropy of test set: -1/N * summation of log P(wi-1 wi) from i= 1 to i = N
+        # Note2: P(wi-1 wi) = λ1 * P(wi| wi-1) + λ2 * P(wi) + λ3
+        
+        # Alogorithm: 
+        
+        # When processing a certain token in the test corpus, we can only keep track of the last token we have processed before it via self.last_index
+        # For the first token, since we only have one term, we cannot compute the entropy in note 2
+        # Hence, we should only start computing the entropy during the 2nd token, when self.test_words_processed = 1 
+        
+        # Note that during the computation of the entropy during the 2nd token (or any other token apart from the 1st token), there could be 4 cases happening:
+        
+        # Case 1 : 1st token is unknown and 2nd token is unknown 
+        # P(wi-1 wi) = λ3
+        
+        # Case 2 : 1st token is known but 2nd token is unknown
+        # P(wi-1 wi) = λ3
+
+        # Case 3 : 1st token is unknown but 2nd token is known
+        # P(wi-1 wi) =  λ2 * P(wi) + λ3  
+
+        # Case 4 : Both tokens are known
+        # P(wi-1 wi) = λ1 * P(wi| wi-1) + λ2 * P(wi) + λ3
+        
+        # To get the index of tokens:
+        # Previous token can be accessed via self.last_index
+        # Current token : self.index[word]
+    
+        # Bigram Probabilities, P(wi| wi-1) could be access in self.bigram_prob and take the exponents of it
+        # Unigram Probabilities, P(wi) = self.unigram_counts[word]/self.total_words
+        
+        # After calculation of P(wi-1 wi) is done, convert to log P(wi-1 wi) with math.log
+        # If self.test_words_processed = 0 , pass
+        # If self.test_words_processed = 1 , self.logProb = -1/self.test_words_processed * log P(wi-1 wi)
+        # If self.test_words_processed > 1 , self.logProb = (self.logProb * -(self.test_words_processed - 1) + log P(wi-1 wi))/ -self.test_words_processed
+
+        # Then increment self.test_words_processed
+
+
         pass
 
     def process_test_file(self, test_filename):
