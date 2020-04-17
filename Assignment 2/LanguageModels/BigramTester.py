@@ -123,24 +123,59 @@ class BigramTester(object):
         # P(wi-1 wi) =  λ2 * P(wi) + λ3  
 
         # Case 4 : Both tokens are known
-        # P(wi-1 wi) = λ1 * P(wi| wi-1) + λ2 * P(wi) + λ3
+        # Might not necessarily have a bigram in the training model even if both tokens are known 
+        # If bigram in training model: P(wi-1 wi) = λ1 * P(wi| wi-1) + λ2 * P(wi) + λ3
+        # Else P(wi-1 wi) =  λ2 * P(wi) + λ3  
         
         # To get the index of tokens:
         # Previous token can be accessed via self.last_index
         # Current token : self.index[word]
     
         # Bigram Probabilities, P(wi| wi-1) could be access in self.bigram_prob and take the exponents of it
-        # Unigram Probabilities, P(wi) = self.unigram_counts[word]/self.total_words
+        # Unigram Probabilities, P(wi) = self.unigram_count[word]/self.total_words
         
         # After calculation of P(wi-1 wi) is done, convert to log P(wi-1 wi) with math.log
-        # If self.test_words_processed = 0 , pass
+        # If self.test_words_processed = 0 , self.logProb = 0
         # If self.test_words_processed = 1 , self.logProb = -1/self.test_words_processed * log P(wi-1 wi)
         # If self.test_words_processed > 1 , self.logProb = (self.logProb * -(self.test_words_processed - 1) + log P(wi-1 wi))/ -self.test_words_processed
 
-        # Then increment self.test_words_processed
+        # Finally, increment self.test_words_processed and update self.last_index
 
+        
+        # Processing of the first token
+        if self.test_words_processed == 0 :
+            id = self.index[word] if word in self.index else -1
+            self.logProb = 0
 
-        pass
+        elif self.test_words_processed >= 1 :
+            id = self.index[word] if word in self.index else -1
+            prev_id = self.last_index
+
+            # Case 1 and 2: As long as 2nd token is unknown, P(wi-1 wi) = λ3 irregardless of whether 1st token is known 
+            if id == -1 :
+                prob = self.lambda3
+            # Case 3: P(wi-1 wi) =  λ2 * P(wi) + λ3  
+            elif prev_id == -1 and id != -1 :  
+                prob = self.lambda2 * int(self.unigram_count[word])/self.total_words + self.lambda3
+            
+            # Case 4: Both tokens are known
+            # If bigram in training model: P(wi-1 wi) = λ1 * P(wi| wi-1) + λ2 * P(wi) + λ3
+            # Else P(wi-1 wi) =  λ2 * P(wi) + λ3 
+            elif prev_id != -1 and id != -1:
+                if (prev_id , id) in self.bigram_prob:
+                    prob = self.lambda1 * math.exp(self.bigram_prob[(prev_id,id)]) + self.lambda2 * int(self.unigram_count[word])/self.total_words + self.lambda3
+                else:
+                    prob = self.lambda2 * int(self.unigram_count[word])/self.total_words + self.lambda3
+
+            if self.test_words_processed == 1:
+                self.logProb = -1/self.test_words_processed * math.log(prob)
+            
+            elif self.test_words_processed > 1:
+                self.logProb = (self.logProb * -(self.test_words_processed - 1) + math.log(prob))/ -self.test_words_processed
+
+        self.test_words_processed += 1
+        self.last_index = id 
+
 
     def process_test_file(self, test_filename):
         """
