@@ -19,7 +19,7 @@ class BinaryLogisticRegression(object):
 
     LEARNING_RATE = 0.1  # The learning rate.
     CONVERGENCE_MARGIN = 0.001  # The convergence criterion.
-    MAX_ITERATIONS = 100 # Maximal number of passes through the datapoints in stochastic gradient descent.
+    MAX_ITERATIONS = 1000 # Maximal number of passes through the datapoints in stochastic gradient descent.
     MINIBATCH_SIZE = 1000 # Minibatch size (only for minibatch gradient descent)
 
     # ----------------------------------------------------------------------
@@ -78,7 +78,7 @@ class BinaryLogisticRegression(object):
 
         # REPLACE THE COMMAND BELOW WITH YOUR CODE
 
-        return self.sigmoid(self.theta.dot(datapoint))
+        return self.sigmoid(self.theta.dot(self.x[datapoint].T))
 
 
     def compute_gradient_for_all(self):
@@ -92,12 +92,13 @@ class BinaryLogisticRegression(object):
         # np.vectorize can be used so that we can use our sigmoid function on vectors
         sigmoid_v = np.vectorize(self.sigmoid) 
 
-        # Apply sigmoid function to the result of theta * x.T and deduct all values by corresponding label in the labels vector (self.y)
+        # Apply sigmoid function to the result of theta * X.T and deduct Y , i.e deduct all values by corresponding label in the labels vector (self.y)
         diff = sigmoid_v(self.theta.dot(self.x.T)) - self.y
         
         # Update the gradient for each feature based on the entire dataset
         for k in range(self.FEATURES):
             self.gradient[k] = self.x.T[k].dot(diff.T) / self.DATAPOINTS
+
 
 
     def compute_gradient_minibatch(self, minibatch):
@@ -117,6 +118,13 @@ class BinaryLogisticRegression(object):
 
         # YOUR CODE HERE
 
+        # Apply sigmoid function to the result of theta * (x_i).T and deduct y_i thereafter
+        diff = self.sigmoid(self.theta.dot(self.x[datapoint].T)) - self.y[datapoint]
+
+        # Update the gradient for each feature based on the datapoint x_i
+        for k in range(self.FEATURES):
+            self.gradient[k] = self.x[datapoint][k] * diff
+
 
     def stochastic_fit(self):
         """
@@ -125,6 +133,28 @@ class BinaryLogisticRegression(object):
         self.init_plot(self.FEATURES)
 
         # YOUR CODE HERE
+
+        # Initialise iteration to 0. Will be used for tracking
+        itr = 0 
+        while True:
+            itr += 1
+
+            i = random.randrange(0, self.DATAPOINTS) # Get random i
+            prev_gradient = np.array(self.gradient[:])
+            self.compute_gradient(i)
+
+            for k in range(self.FEATURES):
+                self.theta[k] -= self.LEARNING_RATE * self.gradient[k]
+
+            # For tracking purposes
+            # Note: Convergence means sum of square of gradient[k] is smaller than some convergence margin
+            if itr == 1 or itr % 10 == 0:
+                print("Iter: {} , Sum of square of Gradient: {} ".format(itr, np.sum(np.square(self.gradient))))
+                self.update_plot(np.sum(np.square(self.gradient)))
+
+            # Terminating condition
+            if np.sum(np.square(self.gradient)) < self.CONVERGENCE_MARGIN:  #or itr >= self.MAX_ITERATIONS :
+                break
 
 
     def minibatch_fit(self):
@@ -156,15 +186,15 @@ class BinaryLogisticRegression(object):
                 self.theta[k] -= self.LEARNING_RATE * self.gradient[k]
             
             # For tracking purposes
-            if itr % 100 == 0:
-                print("Iter: {} , Gradient: {} , Max Gradient: {} ".format(itr, self.gradient, self.gradient.max()))
+            # Note: Convergence means sum of square of gradient[k] is smaller than some convergence margin
+            if itr == 1 or itr % 10 == 0:
+                print("Iter: {} , Sum of square of Gradient: {} ".format(itr, np.sum(np.square(self.gradient))))
                 self.update_plot(np.sum(np.square(self.gradient)))
 
-            if self.gradient.max() < self.CONVERGENCE_MARGIN:
+            # Terminating condition
+            if np.sum(np.square(self.gradient)) < self.CONVERGENCE_MARGIN:
                 break
-            
-            # if itr > self.MAX_ITERATIONS:
-            #    break
+
         
 
 
