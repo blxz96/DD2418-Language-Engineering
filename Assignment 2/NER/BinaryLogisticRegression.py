@@ -17,7 +17,7 @@ class BinaryLogisticRegression(object):
 
     #  ------------- Hyperparameters ------------------ #
 
-    LEARNING_RATE = 0.01  # The learning rate.
+    LEARNING_RATE = 0.1  # The learning rate.
     CONVERGENCE_MARGIN = 0.001  # The convergence criterion.
     MAX_ITERATIONS = 100 # Maximal number of passes through the datapoints in stochastic gradient descent.
     MINIBATCH_SIZE = 1000 # Minibatch size (only for minibatch gradient descent)
@@ -78,7 +78,7 @@ class BinaryLogisticRegression(object):
 
         # REPLACE THE COMMAND BELOW WITH YOUR CODE
 
-        return 0
+        return self.sigmoid(self.theta.dot(datapoint))
 
 
     def compute_gradient_for_all(self):
@@ -88,6 +88,16 @@ class BinaryLogisticRegression(object):
         """
 
         # YOUR CODE HERE
+
+        # np.vectorize can be used so that we can use our sigmoid function on vectors
+        sigmoid_v = np.vectorize(self.sigmoid) 
+
+        # Apply sigmoid function to the result of theta * x.T and deduct all values by corresponding label in the labels vector (self.y)
+        diff = sigmoid_v(self.theta.dot(self.x.T)) - self.y
+        
+        # Update the gradient for each feature based on the entire dataset
+        for k in range(self.FEATURES):
+            self.gradient[k] = self.x.T[k].dot(diff.T) / self.DATAPOINTS
 
 
     def compute_gradient_minibatch(self, minibatch):
@@ -133,6 +143,29 @@ class BinaryLogisticRegression(object):
         self.init_plot(self.FEATURES)
 
         # YOUR CODE HERE
+
+        # Initialise iteration to 0. Will be used for tracking
+        itr = 0 
+        while True:
+            itr += 1
+
+            prev_gradient = np.array(self.gradient[:])
+            self.compute_gradient_for_all()
+
+            for k in range(self.FEATURES):
+                self.theta[k] -= self.LEARNING_RATE * self.gradient[k]
+            
+            # For tracking purposes
+            if itr % 100 == 0:
+                print("Iter: {} , Gradient: {} , Max Gradient: {} ".format(itr, self.gradient, self.gradient.max()))
+                self.update_plot(np.sum(np.square(self.gradient)))
+
+            if self.gradient.max() < self.CONVERGENCE_MARGIN:
+                break
+            
+            # if itr > self.MAX_ITERATIONS:
+            #    break
+        
 
 
     def classify_datapoints(self, test_data, test_labels):
