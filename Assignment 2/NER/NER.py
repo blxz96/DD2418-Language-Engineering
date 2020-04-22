@@ -1,6 +1,7 @@
 import argparse
 import sys
 import codecs
+import string
 from BinaryLogisticRegression import BinaryLogisticRegression
 
 """
@@ -53,7 +54,23 @@ class NER(object):
 
 
     def first_token_in_sentence(self):
-           return self.last_token in [None, '.', '!', '?']
+        return self.last_token in [None, '.', '!', '?']
+
+    def token_contains_digit(self):
+        for element in self.current_token:
+            if element in string.digits:
+                return True
+        return False
+
+    def token_contains_punctuation(self):
+        for element in self.current_token:
+            if element in string.punctuation:
+                return True
+        return False
+	    
+
+    def contains_digit(self):
+        return 
 
     class FeatureFunction(object):
         def __init__(self, func):
@@ -130,6 +147,9 @@ class NER(object):
         self.features = [
             NER.FeatureFunction(self.capitalized_token),
             NER.FeatureFunction(self.first_token_in_sentence),
+            NER.FeatureFunction(self.token_contains_digit),
+            NER.FeatureFunction(self.token_contains_punctuation)
+            
         ]
 
         if training_file:
