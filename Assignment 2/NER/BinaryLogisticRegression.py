@@ -20,7 +20,7 @@ class BinaryLogisticRegression(object):
     LEARNING_RATE = 0.1  # The learning rate.
     CONVERGENCE_MARGIN = 0.001  # The convergence criterion.
     MAX_ITERATIONS = 1000 # Maximal number of passes through the datapoints in stochastic gradient descent.
-    MINIBATCH_SIZE = 1000 # Minibatch size (only for minibatch gradient descent)
+    MINIBATCH_SIZE = 1024 # Minibatch size (only for minibatch gradient descent)
 
     # ----------------------------------------------------------------------
 
@@ -106,9 +106,20 @@ class BinaryLogisticRegression(object):
         Computes the gradient based on a minibatch
         (used for minibatch gradient descent).
         """
-        
         # YOUR CODE HERE
 
+        # Retrieving the datapoints of minibatch X and their corresponding label, minibatch Y
+        miniX, miniY = self.x[minibatch] , self.y[minibatch]
+
+        # np.vectorize can be used so that we can use our sigmoid function on vectors
+        sigmoid_v = np.vectorize(self.sigmoid) 
+
+        # Apply sigmoid function to the result of theta * miniX.T and deduct miniY 
+        diff = sigmoid_v(self.theta.dot(miniX.T)) - miniY
+
+        # Update the gradient for each feature based on the mini dataset
+        for k in range(self.FEATURES):
+            self.gradient[k] = miniX.T[k].dot(diff.T) / len(minibatch)
 
     def compute_gradient(self, datapoint):
         """
@@ -154,6 +165,7 @@ class BinaryLogisticRegression(object):
 
             # Terminating condition
             if np.sum(np.square(self.gradient)) < self.CONVERGENCE_MARGIN:  #or itr >= self.MAX_ITERATIONS :
+                print("At termination, Iter: {} , Sum of Square of Gradient: {}:".format(itr,np.sum(np.square(self.gradient))))
                 break
 
 
@@ -164,6 +176,35 @@ class BinaryLogisticRegression(object):
         self.init_plot(self.FEATURES)
 
         # YOUR CODE HERE
+
+        # Initialise iteration to 0. Will be used for tracking
+        itr = 0
+        while True:
+            itr += 1
+
+            # Randomly pick 1024 datapoints by their index, then send through method below
+            datapoints = []
+            for i in range(self.MINIBATCH_SIZE):
+                random_datapoint = random.randrange(0, self.DATAPOINTS)
+                datapoints.append(random_datapoint)
+
+            # To calculate difference in gradient
+            prev_gradient = np.array(self.gradient[:])
+            self.compute_gradient_minibatch(datapoints)
+
+            for k in range(self.FEATURES):
+                self.theta[k] -= self.LEARNING_RATE * self.gradient[k]
+
+            # For tracking purposes
+            # Note: Convergence means sum of square of gradient[k] is smaller than some convergence margin
+            if itr == 1 or itr % 10 == 0:
+                print("Iter: {} , Sum of square of Gradient: {} ".format(itr, np.sum(np.square(self.gradient))))
+                self.update_plot(np.sum(np.square(self.gradient)))
+
+            # Terminating condition
+            if np.sum(np.square(self.gradient)) < self.CONVERGENCE_MARGIN:
+                print("At termination, Iter: {} , Sum of Square of Gradient: {}".format(itr,np.sum(np.square(self.gradient))))
+                break
 
 
     def fit(self):
@@ -193,6 +234,7 @@ class BinaryLogisticRegression(object):
 
             # Terminating condition
             if np.sum(np.square(self.gradient)) < self.CONVERGENCE_MARGIN:
+                print("At termination, Iter: {} , Sum of Square of Gradient: {}:".format(itr,np.sum(np.square(self.gradient))))
                 break
 
         
