@@ -151,7 +151,6 @@ class BinaryLogisticRegression(object):
             itr += 1
 
             i = random.randrange(0, self.DATAPOINTS) # Get random i
-            prev_gradient = np.array(self.gradient[:])
             self.compute_gradient(i)
 
             for k in range(self.FEATURES):
@@ -188,8 +187,6 @@ class BinaryLogisticRegression(object):
                 random_datapoint = random.randrange(0, self.DATAPOINTS)
                 datapoints.append(random_datapoint)
 
-            # To calculate difference in gradient
-            prev_gradient = np.array(self.gradient[:])
             self.compute_gradient_minibatch(datapoints)
 
             for k in range(self.FEATURES):
@@ -220,7 +217,6 @@ class BinaryLogisticRegression(object):
         while True:
             itr += 1
 
-            prev_gradient = np.array(self.gradient[:])
             self.compute_gradient_for_all()
 
             for k in range(self.FEATURES):

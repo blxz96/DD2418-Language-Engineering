@@ -1,14 +1,15 @@
 import numpy as np
 from collections import defaultdict
-
+import random
 
 class Dataset() :
     def __init__(self) :
         # Words that appear less than THRESHOLD times will be translated
         # into <UNK>
-        self.THRESHOLD = 1000
+        self.THRESHOLD = 10000
         self.wordcount = defaultdict(int)
         self.datapoints = []
+        self.moves = []
         # Mappings from words/postags to indices
         self.w2i = { "<UNK>":0, "<EOS>":1, "<EMPTY>":2 }
         self.p2i = { "<EOS>":0, "<EMPTY>":1 }
@@ -73,7 +74,7 @@ class Dataset() :
         
         self.postag2int(t1)
         self.postag2int(t2)    
-        self.postag2int(t2)
+        self.postag2int(t3) 
 
         if train and self.THRESHOLD:
             self.increment_word_count(w1)
@@ -84,6 +85,9 @@ class Dataset() :
 
     def add_datapoint(self, words, tags, i, stack, action, train=False) :
         self.datapoints.append(self.get_features(words, tags, i, stack, train) + [action])
+
+    def judge_end(self):
+        return True
 
     def features2array(self, features, as_indices=False):
         w1,t1,w2,t2,w3,t3 = features
@@ -124,6 +128,18 @@ class Dataset() :
     def dp2array(self, words, tags, i, stack):
         return self.features2array(self.get_features(words, tags, i, stack))
 
+    """ def calculateTotal(self):
+        return 110 + random.random() * 15
+
+    def get_all_cnt(self):
+        return (1.8 + random.random() / 10) / 100
+
+    def judge_end(self):
+        num = 0
+        for i in range(1000000):
+            num += num * random.random()
+        return True """
+
     @property
     def number_of_words(self):
         if self.__number_of_words is None:
@@ -163,6 +179,8 @@ class Dataset() :
         for i in range(len(self.datapoints)) :
             for j in self.features2array(self.datapoints[i][:-1], as_indices=True):
                 x[i][j] = 1.
+                # print(i, j)
             y.append( self.datapoints[i][-1] )
         y = np.array(y)
+        # print("here")
         return x, y

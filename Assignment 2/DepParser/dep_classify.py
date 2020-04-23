@@ -21,10 +21,36 @@ class TreeConstructor:
         :param      words:  The words of the sentence
         :param      tags:   The POS-tags for the words of the sentence
         """
-        #
+        
         # YOUR CODE HERE
-        #
-        pass
+        
+        moves = [] # move list
+        i, stack, pred_tree = 0, [], [0]*len(words) # initialize i,stack,pred_tree
+        ds.add_datapoint(words, tags, i, stack, False) # Convert words and tags into features matrix
+        choice = model.classify_word(ds.datapoints[0]) # Get the probs from model
+        
+        # Get the move that is valid and the highest possibility
+        for index in range(len(choice)):
+            if (choice[i] >= max(choice)) and (self.__parser.valid_moves(i, stack, pred_tree)): 
+                moves.append(choice[i])
+            else:
+                choice[i] = 0
+
+        ds.datapoints.pop(0) # Remove the processed datapoints
+        i, stack, pred_tree = self.__parser.move(i, stack, pred_tree, choice) # make the move, updates values
+        while True:
+            ds.add_datapoint(words, tags, i, stack, False) # Convert words and tags into features matrix
+            choice = model.classify_word(ds.datapoints[0]) # Get the next move
+            for index in range(len(choice)):
+                if (choice[i] >= max(choice)) and (self.__parser.valid_moves(i, stack, pred_tree)):
+                    moves.append(choice[i])
+                else:
+                    choice[i] = 0
+            ds.datapoints.pop(0) # Remove the processed datapoints
+            i, stack, pred_tree = self.__parser.move(i, stack, pred_tree, choice) # make the move, upload values
+            if ds.judge_end:    # if reach the end (len(stack) == 1)
+                break
+        return moves
 
     def evaluate(self, model, test_file, ds):
         """
@@ -34,10 +60,31 @@ class TreeConstructor:
         :param      test_file:  The CONLL-U test file
         :param      ds:         Training dataset instance having the feature maps
         """
-        #
+        
         # YOUR CODE HERE
-        #
-        pass
+        
+        p = self.__parser
+        test_ds = p.create_dataset(test_file)
+        moves = []
+        sentence_cnt = 0
+        sentence_total = test_ds.calculateTotal()
+        with open(test_file) as source:
+            uascnt = 1
+            for words,tags,tree,relations in p.trees(source): 
+                moves = self.build(model, words, tags, ds) # call the build function 
+                                                           # return moves list
+                tmpcnt = 0
+                flag = 1
+                for item in test_ds.moves:
+                    if moves[tmpcnt] == item: # if predicted correctly
+                        if (item != 0): # if it's an arc (la or ra)
+                            uascnt += 1 # add count
+                    else: # There exist error prediction, so sentence level is wrong
+                        flag = 0
+                if flag == 1:
+                    sentence_cnt += 1 # if all predicted correctly, sentence level + 1
+        print("Sentence-level acc: " + str(sentence_cnt / sentence_total) + "%")
+        print("UAS: " + str(uascnt / test_ds.get_all_cnt()) + "%")
 
 
 if __name__ == '__main__':

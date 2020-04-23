@@ -69,15 +69,59 @@ class CKY :
     # parse table, and all the backpointers in the table
     def parse(self, s) :
         self.words = s.split()        
-        #
+        
         #  YOUR CODE HERE
-        #
-        pass
+        
+        n = len(self.words)
 
+        for i in range(n): # create a list with nested lists
+            self.table.append([])
+            for j in range(n):
+                self.table[i].append("")
+
+        for j in range(n):
+            for i in range(n-1, -1, -1):
+                if j < i:
+                    continue
+                elif j == i:
+                    curword = self.words[i]
+                    self.table[i][j] = self.unary_rules[curword]
+                    for every in self.unary_rules[curword]:
+                        tmptup = (every, i, j, curword, -1, -1, curword, -1, -1)
+                        self.backptr.append(tmptup)
+                    
+                else:
+                    self.binary_find(n, i, j)
+
+    # Find in binary_rules
+    def binary_find(self, n, r, c):
+        # print("----------")
+        # print(r, c)
+        tmplist = []
+        for j in range(c):
+            leftBox = self.table[r][j]
+            i = j + 1
+            belowBox = self.table[i][c]
+
+            if (leftBox == "") or (belowBox == ""):
+                continue
+            for leftBoxItems in leftBox:
+                for belowBoxItems in belowBox:
+                    tmpdic = {}
+                    if leftBoxItems in self.binary_rules:
+                        tmpdic = self.binary_rules[leftBoxItems]
+                        if belowBoxItems in tmpdic:
+                            tmplist.append(tmpdic[belowBoxItems][0])
+                            tmptup = (tmpdic[belowBoxItems][0], r, c, leftBoxItems, r, j, belowBoxItems, i, c)
+                            self.backptr.append(tmptup)
+        self.table[r][c] = tmplist
 
     # Prints the parse table
     def print_table( self ) :
         t = AsciiTable(self.table)
+        t.inner_heading_row_border = False
+        print( t.table )
+        t = AsciiTable(self.backptr)
         t.inner_heading_row_border = False
         print( t.table )
 
@@ -85,10 +129,17 @@ class CKY :
     # Prints all parse trees derivable from cell in row 'row' and
     # column 'column', rooted with the symbol 'symbol'
     def print_trees( self, row, column, symbol ) :
-        #
-        #  YOUR CODE HERE
-        #
-        pass
+        for everytup in self.backptr:
+
+            if (everytup[1] == row) and (everytup[2] == column) and (everytup[0] == symbol):
+                if (everytup[4] == -1):
+                    print(symbol + " ( " + everytup[3] + " ),"),
+                    return
+                else:
+                    print(symbol + "("),
+                    self.print_trees(everytup[4], everytup[5], everytup[3])
+                    self.print_trees(everytup[7], everytup[8], everytup[6])
+
 
 
 def main() :
@@ -108,7 +159,7 @@ def main() :
     if arguments.print_parsetable :
         cky.print_table()
     if arguments.print_trees :
-        cky.print_trees( len(cky.words)-1, 0, arguments.symbol )
+        cky.print_trees( 0, len(cky.words)-1, arguments.symbol )
     
 
 if __name__ == '__main__' :
