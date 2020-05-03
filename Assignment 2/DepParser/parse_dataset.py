@@ -6,7 +6,7 @@ class Dataset() :
     def __init__(self) :
         # Words that appear less than THRESHOLD times will be translated
         # into <UNK>
-        self.THRESHOLD = 10000
+        self.THRESHOLD = 1000
         self.wordcount = defaultdict(int)
         self.datapoints = []
         self.moves = []

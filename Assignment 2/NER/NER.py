@@ -147,8 +147,8 @@ class NER(object):
         self.features = [
             NER.FeatureFunction(self.capitalized_token),
             NER.FeatureFunction(self.first_token_in_sentence),
-            NER.FeatureFunction(self.token_contains_digit),
-            NER.FeatureFunction(self.token_contains_punctuation)
+            #NER.FeatureFunction(self.token_contains_digit),
+            #NER.FeatureFunction(self.token_contains_punctuation)
             
         ]
 
