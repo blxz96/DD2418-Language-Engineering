@@ -282,7 +282,7 @@ class Word2Vec(object):
         # np.vectorize can be used so that we can use our sigmoid function on vectors
         sigmoid_v = np.vectorize(self.sigmoid) 
         
-        """ for ep in range(self.__epochs):
+        for ep in range(self.__epochs):
             for i in tqdm(range(N)):
 
                 if use_lr_scheduling == True:
@@ -359,7 +359,7 @@ class Word2Vec(object):
                         self.__U[neg_id] -= learning_rate * self.__W[i].dot(sigmoid_v(self.__U[neg_id].T.dot(self.__W[i])))
 
                 # Perform gradient descent of loss function w.r.t focus word v 
-                self.__W[i] -= learning_rate * gradient_focus """
+                self.__W[i] -= learning_rate * gradient_focus
                 
 
         
