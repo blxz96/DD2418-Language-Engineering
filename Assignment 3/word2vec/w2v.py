@@ -16,7 +16,6 @@ This file is part of the computer assignments for the course DD2418 Language eng
 Created 2020 by Dmytro Kalpakchi.
 """
 
-
 class Word2Vec(object):
     def __init__(self, filenames, dimension=300, window_size=2, nsample=10,
                  learning_rate=0.025, epochs=5, use_corrected=True, use_lr_scheduling=True):
@@ -45,13 +44,20 @@ class Word2Vec(object):
         self.__use_corrected = use_corrected
         self.__use_lr_scheduling = use_lr_scheduling
 
+        
 
-    def init_params(self, W, w2i, i2w):
+    def init_params(self, W, w2i, i2w, U, u2i, i2u): # if focus == True, init param for W, else init param of U
+
+
         self.__W = W        # numpy array of size (V*H)
         self.__w2i = w2i    # dictionary {word:indices}
         self.__i2w = i2w    # list containing words
 
+        self.__U = U        # numpy array of size (V*H)
+        self.__u2i = u2i    # dictionary {word:indices}
+        self.__i2u = i2u
 
+        
     @property
     def vocab_size(self):
         return self.__V
@@ -157,9 +163,10 @@ class Word2Vec(object):
                     self.w2i[word] = index
                     self.i2w[index] = word
                     self.unigram_count[word] = 1
+                    index += 1
                 else: 
                     self.unigram_count[word] += 1
-                index += 1
+                
 
         # Calculating the unigram distribution and corrected unigram distribution
 
@@ -185,8 +192,13 @@ class Word2Vec(object):
         context_indices = []
         for line in self.text_gen():
             for i, word in enumerate(line):
-                focus_words.append(word)
-                context_indices.append(self.get_context(line,i))
+                if word not in focus_words: 
+                    focus_words.append(word)
+                    context_indices.append(self.get_context(line,i))
+                if word in focus_words:
+                    focus_index = focus_words.index(word)
+                    context_indices[focus_index].extend(self.get_context(line,i))
+
 
         return focus_words, context_indices
 
@@ -233,7 +245,7 @@ class Word2Vec(object):
         while count < number:
             sample_word = random.choices(population=words , weights=probability)[0]
             sample_index = self.w2i[sample_word]
-            if sample_index != xb and sample_index != pos:
+            if sample_index != xb and sample_index != pos and sample_index not in negative_samples_indices:
                 negative_samples_indices.append(sample_index)
                 count += 1
 
@@ -255,12 +267,12 @@ class Word2Vec(object):
         print("Dataset contains {} datapoints".format(N))
 
         # Initialisation with uniform distribution
-        self.__W = np.random.uniform(size = (N, self.__H))
-        self.__U = np.random.uniform(size = (N, self.__H))
+        # self.__W = np.random.uniform(size = (N, self.__H))
+        # self.__U = np.random.uniform(size = (N, self.__H))
 
         # Initialisation with normal distribution
-        # self.__W = np.random.normal(size = (N, self.__H)) # focus word vector for each word form a matrix
-        # self.__U = np.random.normal(size = (N, self.__H)) # context word vector for each word form a matrix
+        self.__W = np.random.normal(size = (N, self.__H)) # focus word vector for each word form a matrix
+        self.__U = np.random.normal(size = (N, self.__H)) # context word vector for each word form a matrix
 
         # can be adjusted and toggled from __init__
         starting_learning_rate = self.__lr
@@ -270,14 +282,14 @@ class Word2Vec(object):
         # np.vectorize can be used so that we can use our sigmoid function on vectors
         sigmoid_v = np.vectorize(self.sigmoid) 
         
-        for ep in range(self.__epochs):
+        """ for ep in range(self.__epochs):
             for i in tqdm(range(N)):
 
                 if use_lr_scheduling == True:
                     if learning_rate < starting_learning_rate * 0.0001:
                         learning_rate = starting_learning_rate * 0.0001
                     else:
-                        learning_rate = starting_learning_rate * (1- i/(self.__epochs*N + 1))
+                        learning_rate = starting_learning_rate * (1- (ep*N + i)/(self.__epochs*N + 1))
 
                         
                 ######################################################################### 
@@ -313,7 +325,7 @@ class Word2Vec(object):
                 # 
                 #  2. Perform gradient descent of loss function w.r.t the negative word
                 #
-                #  self.__U[neg_id] -= learning_rate * self.__W[i].dot(sigmoid_V(-self.__U[neg_id].T.dot(self.__W[i])))
+                #  self.__U[neg_id] -= learning_rate * self.__W[i].dot(sigmoid_V(self.__U[neg_id].T.dot(self.__W[i])))
                 #
                 #############################################################################
                 # After completing A and B,
@@ -323,7 +335,7 @@ class Word2Vec(object):
                 # self.__W[i] -= learning_rate * gradient_focus
                 #
                 #############################################################################
-
+                
                 gradient_focus = 0
                 focus_index = i
                 context_indices = t[i]
@@ -344,11 +356,13 @@ class Word2Vec(object):
                         # Accumulate gradient of loss function w.r.t focus word v 
                         gradient_focus += self.__U[neg_id].dot(sigmoid_v(self.__U[neg_id].T.dot(self.__W[i])))
                         # Perform gradient descent of loss function w.r.t the negative word
-                        self.__U[neg_id] -= learning_rate * self.__W[i].dot(sigmoid_v(-self.__U[neg_id].T.dot(self.__W[i])))
+                        self.__U[neg_id] -= learning_rate * self.__W[i].dot(sigmoid_v(self.__U[neg_id].T.dot(self.__W[i])))
 
                 # Perform gradient descent of loss function w.r.t focus word v 
-                self.__W[i] -= learning_rate * gradient_focus
+                self.__W[i] -= learning_rate * gradient_focus """
+                
 
+        
 
     def find_nearest(self, words, metric):
         """
@@ -381,11 +395,15 @@ class Word2Vec(object):
         
         all_words = []
 
-        n = NearestNeighbors(n_neighbors=5, metric=metric).fit(self.__W)
+        n = NearestNeighbors(n_neighbors=5, metric=metric).fit(self.__U) #U
+
+        #print('self.__i2w[1000]:{}'.format(self.__i2w[1000]))
+        #print('self.__i2u[1000]:{}'.format(self.__i2u[1000]))
+
 
         for word in words:
             id = self.__w2i[word]
-            context_vector = self.__W[id]
+            context_vector = self.__W[id] #W
 
             distance, indices_of_closest_words = n.kneighbors([context_vector])
 
@@ -394,7 +412,7 @@ class Word2Vec(object):
             for i in range(len(indices_of_closest_words[0])):
                 index = indices_of_closest_words[0][i]
                 dist = distance[0][i]
-                w = self.__i2w[index]
+                w = self.__i2w[index] # doesn't matter i2w or i2u since just a word
                 closest_words.append((w, dist))
             all_words.append(closest_words)
 
@@ -403,44 +421,79 @@ class Word2Vec(object):
 
 
 
-    def write_to_file(self):
+    def write_to_file(self,name,matrix):
         """
         Write the model to a file `w2v.txt`
         """
         try:
-            with open("w2v_uniform_corrected.txt", 'w') as f:
-            # with open("w2v_normal_corrected.txt", 'w') as f:    
-                W = self.__W
+            with open("{}.txt".format(name), 'w') as f:    
+                # to store target word matrix
+                W = matrix
                 f.write("{} {}\n".format(self.__V, self.__H))
                 for i, w in enumerate(self.__i2w): # shouldn't it be w2i? unless i2w is a list of words not a dict
                     f.write(w + " " + " ".join(map(lambda x: "{0:.6f}".format(x), W[i,:])) + "\n")
+            
         except:
             print("Error: failing to write model to the file")
 
 
     @classmethod
-    def load(cls, fname):
+    def load(cls, fname_W, fname_U): # if true, initialise parameter of focus matrix W ; if false, initialise parameter of context matrix U
         """
         Load the word2vec model from a file `fname`
         """
         w2v = None
+    
         try:
-            with open(fname, 'r') as f:
+            fW = open(fname_W, 'r')
+            V, H = (int(a) for a in next(fW).split())
+            w2v = cls([], dimension=H)
+
+            W, i2w, w2i = np.zeros((V, H)), [], {}
+
+            for i, line in enumerate(fW):
+                parts = line.split()
+                word = parts[0].strip()
+                w2i[word] = i
+                W[i] = list(map(float, parts[1:])) # vectors of H dimensions
+                i2w.append(word)
+    
+            
+            fU = open(fname_U, 'r')
+            V, H = (int(a) for a in next(fU).split())
+            w2v = cls([], dimension=H)
+
+            U, i2u, u2i = np.zeros((V, H)), [], {}
+
+            for i, line in enumerate(fU):
+                parts = line.split()
+                word = parts[0].strip()
+                u2i[word] = i
+                U[i] = list(map(float, parts[1:])) # vectors of H dimensions
+                i2u.append(word)
+                
+            w2v.init_params(W, w2i, i2w, U, u2i, i2u)
+
+
+            """ with open(fname_U, 'r') as f:
                 V, H = (int(a) for a in next(f).split())
                 w2v = cls([], dimension=H)
 
                 W, i2w, w2i = np.zeros((V, H)), [], {}
+
                 for i, line in enumerate(f):
                     parts = line.split()
                     word = parts[0].strip()
                     w2i[word] = i
                     W[i] = list(map(float, parts[1:])) # vectors of H dimensions
                     i2w.append(word)
-
-                w2v.init_params(W, w2i, i2w)
+                
+                w2v.init_params(W, w2i, i2w, focus= True)
+        """
         except:
             print("Error: failing to load the model to the file")
         return w2v
+
 
 
     def interact(self):
@@ -465,7 +518,8 @@ class Word2Vec(object):
         example words interactively
         """
         self.train()
-        self.write_to_file()
+        self.write_to_file('w2v_W',self.__W)
+        self.write_to_file('w2v_U',self.__U)
         self.interact()
         
 
@@ -473,10 +527,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='word2vec embeddings toolkit')
     parser.add_argument('-t', '--text', default='harry_potter_1.txt',
                         help='Comma-separated source text files to be trained on')
-    parser.add_argument('-s', '--save', default='w2v_uniform_corrected.txt', help='Filename where word vectors are saved')
-    # parser.add_argument('-s', '--save', default='w2v_normal_corrected.txt', help='Filename where word vectors are saved')
-    parser.add_argument('-d', '--dimension', default=50, help='Dimensionality of word vectors')
-    parser.add_argument('-ws', '--window-size', default=2, help='Context window size')
+    #parser.add_argument('-s', '--save', default='w2v.txt', help='Filename where word vectors are saved')
+    parser.add_argument('-s_W', '--save_W', default='w2v_W.txt', help='Filename where word vectors are saved') #
+    parser.add_argument('-s_U', '--save_U', default='w2v_U.txt', help='Filename where word vectors are saved') #
+    parser.add_argument('-d', '--dimension', default=300, help='Dimensionality of word vectors') 
+    parser.add_argument('-ws', '--window-size', default=3, help='Context window size')
     parser.add_argument('-neg', '--negative_sample', default=10, help='Number of negative samples')
     parser.add_argument('-lr', '--learning-rate', default=0.025, help='Initial learning rate')
     parser.add_argument('-e', '--epochs', default=5, help='Number of epochs')
@@ -487,8 +542,8 @@ if __name__ == '__main__':
                         help="An indicator of whether using the learning rate scheduling")
     args = parser.parse_args()
 
-    if os.path.exists(args.save):
-        w2v = Word2Vec.load(args.save)
+    if os.path.exists(args.save_W) and os.path.exists(args.save_U): #
+        w2v = Word2Vec.load(args.save_W, args.save_U)  #
         if w2v:
             w2v.interact()
     else:
