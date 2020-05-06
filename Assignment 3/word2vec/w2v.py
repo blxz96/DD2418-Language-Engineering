@@ -267,12 +267,12 @@ class Word2Vec(object):
         print("Dataset contains {} datapoints".format(N))
 
         # Initialisation with uniform distribution
-        # self.__W = np.random.uniform(size = (N, self.__H))
-        # self.__U = np.random.uniform(size = (N, self.__H))
+        self.__W = np.random.uniform(size = (N, self.__H))
+        self.__U = np.random.uniform(size = (N, self.__H))
 
         # Initialisation with normal distribution
-        self.__W = np.random.normal(size = (N, self.__H)) # focus word vector for each word form a matrix
-        self.__U = np.random.normal(size = (N, self.__H)) # context word vector for each word form a matrix
+        # self.__W = np.random.normal(size = (N, self.__H)) # focus word vector for each word form a matrix
+        # self.__U = np.random.normal(size = (N, self.__H)) # context word vector for each word form a matrix
 
         # can be adjusted and toggled from __init__
         starting_learning_rate = self.__lr
@@ -344,7 +344,9 @@ class Word2Vec(object):
                 for pos_id in context_indices:
                     
                     # Accumulate gradient of loss function w.r.t focus word v 
-                    gradient_focus += self.__U[pos_id].dot(sigmoid_v(self.__U[pos_id].T.dot(self.__W[i]))-1)
+                    # gradient_focus += self.__U[pos_id].dot(sigmoid_v(self.__U[pos_id].T.dot(self.__W[i]))-1)
+                    self.__W[i] -= learning_rate * self.__U[pos_id].dot(sigmoid_v(self.__U[pos_id].T.dot(self.__W[i]))-1)
+
                     # Perform gradient descent of loss function w.r.t the positive word
                     self.__U[pos_id] -= learning_rate * self.__W[i].dot(sigmoid_v(self.__U[pos_id].T.dot(self.__W[i]))-1)
                     
@@ -354,12 +356,14 @@ class Word2Vec(object):
                     # For every negative index
                     for neg_id in negative_samples:
                         # Accumulate gradient of loss function w.r.t focus word v 
-                        gradient_focus += self.__U[neg_id].dot(sigmoid_v(self.__U[neg_id].T.dot(self.__W[i])))
+                        # gradient_focus += self.__U[neg_id].dot(sigmoid_v(self.__U[neg_id].T.dot(self.__W[i])))
+                        self.__W[i] -= learning_rate * self.__U[neg_id].dot(sigmoid_v(self.__U[neg_id].T.dot(self.__W[i])))
+                        
                         # Perform gradient descent of loss function w.r.t the negative word
                         self.__U[neg_id] -= learning_rate * self.__W[i].dot(sigmoid_v(self.__U[neg_id].T.dot(self.__W[i])))
 
                 # Perform gradient descent of loss function w.r.t focus word v 
-                self.__W[i] -= learning_rate * gradient_focus
+                #self.__W[i] -= learning_rate * gradient_focus
                 
 
         
@@ -395,26 +399,32 @@ class Word2Vec(object):
         
         all_words = []
 
-        n = NearestNeighbors(n_neighbors=5, metric=metric).fit(self.__U) #U
+        n = NearestNeighbors(n_neighbors=5, metric=metric).fit(self.__W) 
 
         #print('self.__i2w[1000]:{}'.format(self.__i2w[1000]))
         #print('self.__i2u[1000]:{}'.format(self.__i2u[1000]))
 
-
+        
         for word in words:
-            id = self.__w2i[word]
-            context_vector = self.__W[id] #W
 
-            distance, indices_of_closest_words = n.kneighbors([context_vector])
+            try:
+                id = self.__w2i[word]
+                context_vector = self.__W[id] 
 
-            # Now we have indices of closest words
-            closest_words = []
-            for i in range(len(indices_of_closest_words[0])):
-                index = indices_of_closest_words[0][i]
-                dist = distance[0][i]
-                w = self.__i2w[index] # doesn't matter i2w or i2u since just a word
-                closest_words.append((w, dist))
-            all_words.append(closest_words)
+                distance, indices_of_closest_words = n.kneighbors([context_vector])
+
+                # Now we have indices of closest words
+                closest_words = []
+                for i in range(len(indices_of_closest_words[0])):
+                    index = indices_of_closest_words[0][i]
+                    dist = distance[0][i]
+                    w = self.__i2w[index] # doesn't matter i2w or i2u since just a word
+                    closest_words.append((w, dist))
+                all_words.append(closest_words)
+            
+            except KeyError:
+                print("The word '{}' does not exist in the corpus!\n".format(word))
+                continue 
 
 
         return all_words
@@ -518,8 +528,8 @@ class Word2Vec(object):
         example words interactively
         """
         self.train()
-        self.write_to_file('w2v_W',self.__W)
-        self.write_to_file('w2v_U',self.__U)
+        self.write_to_file('ps_uniform_300d_LRS_on_focus',self.__W)
+        self.write_to_file('ps_uniform_300d_LRS_on_context',self.__U)
         self.interact()
         
 
@@ -528,14 +538,14 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--text', default='harry_potter_1.txt',
                         help='Comma-separated source text files to be trained on')
     #parser.add_argument('-s', '--save', default='w2v.txt', help='Filename where word vectors are saved')
-    parser.add_argument('-s_W', '--save_W', default='w2v_W.txt', help='Filename where word vectors are saved') #
-    parser.add_argument('-s_U', '--save_U', default='w2v_U.txt', help='Filename where word vectors are saved') #
+    parser.add_argument('-s_W', '--save_W', default='ps_uniform_300d_LRS_on_focus.txt', help='Filename where word vectors are saved') #
+    parser.add_argument('-s_U', '--save_U', default='ps_uniform_300d_LRS_on_context.txt', help='Filename where word vectors are saved') #
     parser.add_argument('-d', '--dimension', default=300, help='Dimensionality of word vectors') 
     parser.add_argument('-ws', '--window-size', default=3, help='Context window size')
     parser.add_argument('-neg', '--negative_sample', default=10, help='Number of negative samples')
-    parser.add_argument('-lr', '--learning-rate', default=0.025, help='Initial learning rate')
+    parser.add_argument('-lr', '--learning-rate', default=0.05, help='Initial learning rate')
     parser.add_argument('-e', '--epochs', default=5, help='Number of epochs')
-    parser.add_argument('-uc', '--use-corrected', action='store_true', default=True,
+    parser.add_argument('-uc', '--use-corrected', action='store_true', default=False,
                         help="""An indicator of whether to use a corrected unigram distribution
                                 for negative sampling""")
     parser.add_argument('-ulrs', '--use-learning-rate-scheduling', action='store_true', default=True,

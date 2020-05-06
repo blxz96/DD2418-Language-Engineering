@@ -4,6 +4,7 @@ import time
 import string
 import numpy as np
 from halo import Halo
+import random
 from sklearn.neighbors import NearestNeighbors
 
 
@@ -48,7 +49,7 @@ class RandomIndexing(object):
     ## @param      right_window_size  The right window size. Stored in an
     ##                                instance variable self__rws.
     ##
-    def __init__(self, filenames, dimension=2000, non_zero=100, non_zero_values=list([-1, 1]), left_window_size=3, right_window_size=3):
+    def __init__(self, filenames, dimension=300, non_zero=15, non_zero_values=list([-1, 1]), left_window_size=3, right_window_size=3):
         self.__sources = filenames
         self.__vocab = set()
         self.__dim = dimension
@@ -116,8 +117,11 @@ class RandomIndexing(object):
     ##
     def build_vocabulary(self):
         # YOUR CODE HERE
+        for line in self.text_gen():
+            for word in line:
+                if word not in self.__vocab:
+                    self.__vocab.add(word)
         self.write_vocabulary()
-
 
     ##
     ## @brief      Get the size of the vocabulary
@@ -173,7 +177,65 @@ class RandomIndexing(object):
     ##
     def create_word_vectors(self):
         # YOUR CODE HERE
-        pass
+
+        # Initialise the dictionary to store the random vectors and context vectors respectively.
+        # Keys will be word, and values will be the embeddings
+        self.__rv, self.__cv = {}, {}
+
+        for line in self.text_gen():
+
+            size = len(line)
+            # if size == 1 , only focus word exists in that line
+            if size == 0 or size == 1: 
+                continue
+
+            # Start from the first word in the line and iterate through the line
+            current_index = 0 
+            while current_index < size:
+                context_words = [] 
+                
+                # to store the context words within the right window size
+                for i in range(1, self.__rws + 1):
+                    try:
+                        context_words.append(line[current_index + i])
+                    except IndexError: # No more word to the right.
+                        break
+                
+                # to store the context words within the left window size
+                for i in range(1, self.__lws + 1):
+                    if current_index - i < 0: # No more word to the left.
+                        break 
+                    else:
+                        context_words.append(line[current_index - i])
+
+                # Check if current word has a context vector assigned to it.
+                try:
+                    context_vector = self.__cv[line[current_index]]
+                except KeyError:
+                    # If no context vector exists, initialize and create 0 vector for it.
+                    self.__cv[line[current_index]] = np.zeros(self.__dim)
+
+                # Add random vectors of context words to the context vector of the current word.
+                for word in context_words:
+                    # Check if context word already has an random vector assigned to it.
+                    try:
+                        random_vector = self.__rv[word]
+                    except KeyError:
+                        # If index vector does not already exist, create it.
+                        non_zero_indices = random.sample(range(0, self.__dim), self.__non_zero) # Indices of where to place non-zero values in the index vector
+                        random_vector = np.zeros(self.__dim)
+                        for i in range(self.__non_zero):
+                            index_of_non_zero = non_zero_indices[i] # Index of where a non_zero value in current iteration should be in the index vector
+                            non_zero_value = self.__non_zero_values[random.randrange(2)] # Either a (-1) or a 1. This is the non-zero value we put in the index vector at the given index.
+                            random_vector[index_of_non_zero] = non_zero_value
+                        self.__rv[word] = random_vector
+
+                    self.__cv[line[current_index]] = np.add(self.__cv[line[current_index]], self.__rv[word])
+
+                current_index += 1
+
+        self.__words = list(self.__cv) # List of all context words
+        self.__matrix = list(self.__cv.values()) # List of all context vectors, i.e embeddings of context words
 
 
     ##
@@ -202,9 +264,33 @@ class RandomIndexing(object):
     ##
     ## @return     A list of list of tuples in the format specified in the function description
     ##
+    
     def find_nearest(self, words, k=5, metric='cosine'):
         # YOUR CODE HERE
-        return [None]
+        all_words = []
+
+        # self.__matrix is our X
+        n = NearestNeighbors(n_neighbors=k, metric=metric).fit(self.__matrix)
+
+        for word in words:
+            context_vector = self.get_word_vector(word)
+            if context_vector is None: 
+                print("The word '{}' does not exist in the corpus!".format(word))
+                continue 
+
+            distance, indices_of_closest_words = n.kneighbors([context_vector])
+
+            # Now we have indices of closest words
+            closest_words = []
+            for i in range(len(indices_of_closest_words[0])):
+                index = indices_of_closest_words[0][i]
+                dist = distance[0][i]
+                w = self.__words[index]
+                closest_words.append((w, dist))
+            all_words.append(closest_words)
+
+
+        return all_words
 
 
     ##
@@ -216,7 +302,10 @@ class RandomIndexing(object):
     ##
     def get_word_vector(self, word):
         # YOUR CODE HERE
-        return None
+        try:
+            return self.__cv[word]
+        except KeyError:
+            return None
 
 
     ##
@@ -269,12 +358,14 @@ class RandomIndexing(object):
             spinner.start(text="Reading vocabulary...")
             start = time.time()
             self.read_vocabulary()
-            spinner.succeed(text="Read vocabulary in {}s. Size: {} words".format(round(time.time() - start, 2), ri.vocabulary_size))
+            # Commented out below to allow Q3 to run since ri will only be initialised if _name_ = "main"
+            # spinner.succeed(text="Read vocabulary in {}s. Size: {} words".format(round(time.time() - start, 2), ri.vocabulary_size))
         else:
             spinner.start(text="Building vocabulary...")
             start = time.time()
             self.build_vocabulary()
-            spinner.succeed(text="Built vocabulary in {}s. Size: {} words".format(round(time.time() - start, 2), ri.vocabulary_size))
+            # Comment out below to allow Q3 to run since ri will only be initialised if _name_ = "main"
+            # spinner.succeed(text="Built vocabulary in {}s. Size: {} words".format(round(time.time() - start, 2), ri.vocabulary_size))
         
         spinner.start(text="Creating vectors using random indexing...")
         start = time.time()
@@ -300,6 +391,17 @@ class RandomIndexing(object):
                 print("Neighbors for {}: {}".format(w, n))
             text = input('> ')
 
+    # For Question 3
+    def getWords(self):
+        return self.__words
+
+    def getMatrix(self):
+        return self.__matrix
+
+    def writeWordsandMatrix(self):
+        filewrite = open("WordsandMatrix.txt", "w")
+        for i in range(len(self.__matrix)):
+            filewrite.write(self.__words[i] + " " + " ".join(map(str, self.__matrix[i])) + "\n")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Random Indexing word embeddings')
@@ -322,3 +424,4 @@ if __name__ == '__main__':
 
         ri = RandomIndexing(filenames)
         ri.train_and_persist()
+        ri.writeWordsandMatrix()
