@@ -359,13 +359,13 @@ class RandomIndexing(object):
             start = time.time()
             self.read_vocabulary()
             # Commented out below to allow Q3 to run since ri will only be initialised if _name_ = "main"
-            # spinner.succeed(text="Read vocabulary in {}s. Size: {} words".format(round(time.time() - start, 2), ri.vocabulary_size))
+            spinner.succeed(text="Read vocabulary in {}s. Size: {} words".format(round(time.time() - start, 2), ri.vocabulary_size))
         else:
             spinner.start(text="Building vocabulary...")
             start = time.time()
             self.build_vocabulary()
             # Comment out below to allow Q3 to run since ri will only be initialised if _name_ = "main"
-            # spinner.succeed(text="Built vocabulary in {}s. Size: {} words".format(round(time.time() - start, 2), ri.vocabulary_size))
+            spinner.succeed(text="Built vocabulary in {}s. Size: {} words".format(round(time.time() - start, 2), ri.vocabulary_size))
         
         spinner.start(text="Creating vectors using random indexing...")
         start = time.time()
@@ -399,9 +399,10 @@ class RandomIndexing(object):
         return self.__matrix
 
     def writeWordsandMatrix(self):
-        filewrite = open("WordsandMatrix.txt", "w")
+        f = open("WordsandMatrix.txt", "w")
+        f.write("{} {}\n".format(len(self.__words), self.__dim))
         for i in range(len(self.__matrix)):
-            filewrite.write(self.__words[i] + " " + " ".join(map(str, self.__matrix[i])) + "\n")
+            f.write(self.__words[i] + " " + " ".join(map(str, self.__matrix[i])) + "\n")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Random Indexing word embeddings')
@@ -421,6 +422,10 @@ if __name__ == '__main__':
     else:
         dir_name = "data"
         filenames = [os.path.join(dir_name, fn) for fn in os.listdir(dir_name)]
+
+        # For comparison for Qn 2 w2v
+        # filenames = ["data\\Harry Potter 1 - Sorcerer's Stone.txt"]
+
 
         ri = RandomIndexing(filenames)
         ri.train_and_persist()

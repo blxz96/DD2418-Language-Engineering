@@ -4,6 +4,7 @@ from sklearn.decomposition import TruncatedSVD, PCA
 from word2vec.w2v import Word2Vec
 from RandomIndexing.random_indexing import RandomIndexing
 import os
+import numpy as np
 
 
 def draw_interactive(x, y, text):
@@ -54,43 +55,52 @@ def draw_interactive(x, y, text):
     plt.show()
 
 
+def load_words_and_embeddings(fname): 
+    w2v = None
+    try:
+        with open(fname, 'r') as f:
+            vocab, dim = (int(a) for a in next(f).split())
+
+            words, X =  [] , np.zeros((vocab, dim))
+
+            for i, line in enumerate(f):
+                parts = line.split()
+                word = parts[0].strip()
+                X[i] = list(map(float, parts[1:])) # vectors of H dimensions
+                words.append(word)
+       
+    except:
+        print("Error: failing to load the model to the file")
+    return words, X
+
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='embedding visualization toolkit')
     parser.add_argument('--file', type=str, help='A textual file containing word vectors')
-    parser.add_argument('-v', '--vector-type', default='ri', choices=['w2v', 'ri'])
-    parser.add_argument('-d', '--decomposition', default='svd', choices=['svd', 'pca'],
+    parser.add_argument('-v', '--vector-type', default='w2v', choices=['w2v', 'ri'])
+    parser.add_argument('-d', '--decomposition', default='pca', choices=['svd', 'pca'],
                         help='Your favorite decomposition method')
     args = parser.parse_args()
 
-    #
     # YOUR CODE HERE
-    #
 
+    # Note: Both model is built from only the corpus from the first book to avoid crashing
+    
+    # If Random Indexing is used
     if (args.vector_type == 'ri'):
-        dir_name = "RandomIndexing/data"
-        filenames = [os.path.join(dir_name, fn) for fn in os.listdir(dir_name)]
-
-        ri = RandomIndexing(filenames)
-        ri.train()
-        x = ri.getMatrix()
-        words = ri.getWords()
-        # x is the weight matrix, words is the corespoding word list
-
-
-        if (args.decomposition == 'pca'):
-            pca = PCA(n_components=2)
-            x_new = pca.fit_transform(x)
-            draw_interactive(x_new[:, 0], x_new[:, 1], words)
-        else:
-            svd = TruncatedSVD(n_components=2)
-            x_new = svd.fit_transform(x)
-            draw_interactive(x_new[:, 0], x_new[:, 1], words)
-
-        # pca = PCA(n_components = 10)
-        # x_new = pca.fit_transform(x)
-        # filewrite = open("WordsandMatrix.txt", "w")
-        # for i in range(len(x_new)):
-        #     filewrite.write(words[i])
-        #     filewrite.write("$")
-        #     filewrite.write(" ".join(map(str, x_new[i])))
-        #     filewrite.write('\n')
+        words, X = load_words_and_embeddings("WordsandMatrix.txt")
+    # If Word2Vec is used
+    else:
+        words, X = load_words_and_embeddings("ps_uniform_300d_LRS_on_focus.txt")
+    
+    # if PCA is used
+    if (args.decomposition == 'pca'):
+        pca = PCA(n_components=2)
+        reduced_X = pca.fit_transform(X) # performing dimensionality reduction 
+        draw_interactive(reduced_X[:, 0], reduced_X[:, 1], words)
+    # if SVD is used
+    else:
+        svd = TruncatedSVD(n_components=2)
+        reduced_X = svd.fit_transform(X)
+        draw_interactive(reduced_X[:, 0], reduced_X[:, 1], words)
