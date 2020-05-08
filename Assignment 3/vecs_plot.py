@@ -56,7 +56,7 @@ def draw_interactive(x, y, text):
 
 
 def load_words_and_embeddings(fname): 
-    w2v = None
+    
     try:
         with open(fname, 'r') as f:
             vocab, dim = (int(a) for a in next(f).split())
@@ -78,7 +78,7 @@ def load_words_and_embeddings(fname):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='embedding visualization toolkit')
     parser.add_argument('--file', type=str, help='A textual file containing word vectors')
-    parser.add_argument('-v', '--vector-type', default='w2v', choices=['w2v', 'ri'])
+    parser.add_argument('-v', '--vector-type', default='w2v', choices=['w2v', 'ri','glove'])
     parser.add_argument('-d', '--decomposition', default='pca', choices=['svd', 'pca'],
                         help='Your favorite decomposition method')
     args = parser.parse_args()
@@ -89,10 +89,13 @@ if __name__ == '__main__':
     
     # If Random Indexing is used
     if (args.vector_type == 'ri'):
-        words, X = load_words_and_embeddings("WordsandMatrix.txt")
+        words, X = load_words_and_embeddings("random_indexing_300d_wsize3.txt")
     # If Word2Vec is used
+    elif (args.vector_type == 'w2v'):
+        words, X = load_words_and_embeddings("w2v_ps_uniform_300d_wsize3_LRS_on_focus.txt")
+    # If Glove is used
     else:
-        words, X = load_words_and_embeddings("ps_uniform_300d_LRS_on_focus.txt")
+        words, X = load_words_and_embeddings("glove_300d.txt")
     
     # if PCA is used
     if (args.decomposition == 'pca'):

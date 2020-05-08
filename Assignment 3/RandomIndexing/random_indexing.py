@@ -392,12 +392,6 @@ class RandomIndexing(object):
             text = input('> ')
 
     # For Question 3
-    def getWords(self):
-        return self.__words
-
-    def getMatrix(self):
-        return self.__matrix
-
     def writeWordsandMatrix(self):
         f = open("WordsandMatrix.txt", "w")
         f.write("{} {}\n".format(len(self.__words), self.__dim))

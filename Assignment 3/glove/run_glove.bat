@@ -1,0 +1,1 @@
+python Glove.py -f HarryPotter1.txt

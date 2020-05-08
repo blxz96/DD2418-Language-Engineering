@@ -363,7 +363,7 @@ class Word2Vec(object):
                         self.__U[neg_id] -= learning_rate * self.__W[i].dot(sigmoid_v(self.__U[neg_id].T.dot(self.__W[i])))
 
                 # Perform gradient descent of loss function w.r.t focus word v 
-                #self.__W[i] -= learning_rate * gradient_focus
+                # self.__W[i] -= learning_rate * gradient_focus
                 
 
         
@@ -399,17 +399,13 @@ class Word2Vec(object):
         
         all_words = []
 
-        n = NearestNeighbors(n_neighbors=5, metric=metric).fit(self.__W) 
-
-        #print('self.__i2w[1000]:{}'.format(self.__i2w[1000]))
-        #print('self.__i2u[1000]:{}'.format(self.__i2u[1000]))
-
+        n = NearestNeighbors(n_neighbors=5, metric=metric).fit(self.__U) 
         
         for word in words:
 
             try:
                 id = self.__w2i[word]
-                context_vector = self.__W[id] 
+                context_vector = self.__U[id] 
 
                 distance, indices_of_closest_words = n.kneighbors([context_vector])
 
@@ -448,7 +444,7 @@ class Word2Vec(object):
 
 
     @classmethod
-    def load(cls, fname_W, fname_U): # if true, initialise parameter of focus matrix W ; if false, initialise parameter of context matrix U
+    def load(cls, fname_W, fname_U): 
         """
         Load the word2vec model from a file `fname`
         """
@@ -530,6 +526,7 @@ class Word2Vec(object):
         self.train()
         self.write_to_file('ps_uniform_300d_LRS_on_focus',self.__W)
         self.write_to_file('ps_uniform_300d_LRS_on_context',self.__U)
+        
         self.interact()
         
 
@@ -538,14 +535,14 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--text', default='harry_potter_1.txt',
                         help='Comma-separated source text files to be trained on')
     #parser.add_argument('-s', '--save', default='w2v.txt', help='Filename where word vectors are saved')
-    parser.add_argument('-s_W', '--save_W', default='ps_uniform_300d_LRS_on_focus.txt', help='Filename where word vectors are saved') #
-    parser.add_argument('-s_U', '--save_U', default='ps_uniform_300d_LRS_on_context.txt', help='Filename where word vectors are saved') #
+    parser.add_argument('-s_W', '--save_W', default='ps_uniform_300d_LRS_on_focus.txt', help='Filename where word vectors are saved') #ps_uniform_300d_LRS_on_focus.txt
+    parser.add_argument('-s_U', '--save_U', default='ps_uniform_300d_LRS_on_context.txt', help='Filename where word vectors are saved') #ps_uniform_300d_LRS_on_context.txt
     parser.add_argument('-d', '--dimension', default=300, help='Dimensionality of word vectors') 
     parser.add_argument('-ws', '--window-size', default=3, help='Context window size')
     parser.add_argument('-neg', '--negative_sample', default=10, help='Number of negative samples')
     parser.add_argument('-lr', '--learning-rate', default=0.05, help='Initial learning rate')
     parser.add_argument('-e', '--epochs', default=5, help='Number of epochs')
-    parser.add_argument('-uc', '--use-corrected', action='store_true', default=False,
+    parser.add_argument('-uc', '--use-corrected', action='store_true', default=True,
                         help="""An indicator of whether to use a corrected unigram distribution
                                 for negative sampling""")
     parser.add_argument('-ulrs', '--use-learning-rate-scheduling', action='store_true', default=True,
