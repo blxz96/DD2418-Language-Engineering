@@ -52,6 +52,7 @@ class GRUCellV2(nn.Module):
         
         # print(x.size()) # 5 x 10 =  batch size x input size
         # print(h.size()) # 5 x 20 =  batch size x hidden size
+        batch_size = h.size()[0]
 
         w_ih = torch.matmul(x, self.w_ih.T)                      # Size = 5 x 60 
         w_ir, w_iz, w_in= torch.chunk(w_ih, 3, 1)                # Note: w_ih is made up of w_xr, w_xz and w_xn. Each is 5 x 20.
@@ -61,16 +62,16 @@ class GRUCellV2(nn.Module):
 
         # Size of b_ih = 60 x 1. torch.repeat_interleave can be used to made to broadcast size to 60 x 5. Then transpose to become 5 x 60.
         # Using torch.chunk, b_ir, b_iz, b_in will then have the size of 5 x 20
-        b_ir, b_iz, b_in = torch.chunk(torch.repeat_interleave(self.b_ih, repeats = 5, dim = 1).T, 3, 1) 
+        b_ir, b_iz, b_in = torch.chunk(torch.repeat_interleave(self.b_ih, repeats = batch_size, dim = 1).T, 3, 1) 
 
         # Size of b_hh = 60 x 1. torch.repeat_interleave can be used to made to broadcast size to 60 x 5. Then transpose to become 5 x 60.
         # Using torch.chunk, b_hr, b_hz and b_hn will then have the size of 5 x 20
-        b_hr, b_hz, b_hn = torch.chunk(torch.repeat_interleave(self.b_hh, repeats = 5, dim = 1).T, 3, 1)
+        b_hr, b_hz, b_hn = torch.chunk(torch.repeat_interleave(self.b_hh, repeats = batch_size, dim = 1).T, 3, 1)
 
         # Reset gate
         r_t = torch.sigmoid(w_hr + b_hr + w_ir + b_ir)
 
-        # Update gate
+        # Update(input) gate
         z_t = torch.sigmoid(w_hz + b_hz + w_iz + b_iz)
 
         # Tentative new hidden state
@@ -116,6 +117,8 @@ class GRU2(nn.Module):
         
         # YOUR CODE HERE
         
+        torch.autograd.set_detect_anomaly(True)
+
         B = x.size()[0] # batch size, 5
         T = x.size()[1] # seq length, 3
         D = x.size()[2] # no. of features, 10
@@ -126,14 +129,14 @@ class GRU2(nn.Module):
         # output.size() = 5 x 3 x 20
         
         for t in range(T):# 0,1,2
-            pre = torch.zeros((B, self.hidden_size)) if t == 0 else outputs[:, t-1, :] # pre.size() = 5 x 20
+            pre = torch.zeros((B, self.hidden_size)) if t == 0 else outputs.clone()[:, t-1, :] # pre.size() = 5 x 20
             outputs[:, t, :] = self.fw.forward(x[:, t, :], pre)                        # x[:, t, :].size() = 5 x 10, output[:, t, :].size() = 5 x 20
             
 
         if self.bidirectional:
             outputs_rev = torch.zeros((B, T, self.hidden_size)) # Size = 5 x 3 x 20
             for t in range(T-1, -1, -1): # 2,1,0
-                pre = torch.zeros((B, self.hidden_size)) if t == T-1 else outputs_rev[:, t+1, :] # Size = 5 x 20
+                pre = torch.zeros((B, self.hidden_size)) if t == T-1 else outputs_rev.clone()[:, t+1, :] # Size = 5 x 20
                 outputs_rev[:, t, :] = self.bw.forward(x[:, t, :], pre)                          # x[:, t, :].size() = 5 x 10, output[:, t, :].size() = 5 x 20
 
         if self.bidirectional:
@@ -154,13 +157,15 @@ if __name__ == '__main__':
     x = torch.randn(5, 3, 10)                                       
     gru = nn.GRU(10, 20, bidirectional=False, batch_first=True) # if batch_first = True, then the input and output tensors are provided as (batch, seq, feature)
     outputs, h = gru(x)
-    # print(outputs)
+    #print(outputs)
+    #print(h)
 
     torch.manual_seed(100304343)
     x = torch.randn(5, 3, 10)
     gru2 = GRU2(10, 20, bidirectional=False)
     outputs, h_fw = gru2(x)
-    # print(outputs)
+    #print(outputs)
+    #print(h_fw)
     
     print("Checking the unidirectional GRU implementation")
     print("Same hidden states of the forward cell?\t\t{}".format(
@@ -171,6 +176,9 @@ if __name__ == '__main__':
     x = torch.randn(5, 3, 10)
     gru = GRU2(10, 20, bidirectional=True)
     outputs, h_fw, h_bw = gru(x)
+    #print(outputs)
+    #print(h_fw)
+    #print(h_bw)
 
     torch.manual_seed(100304343)
     x = torch.randn(5, 3, 10)

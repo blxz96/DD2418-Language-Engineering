@@ -1,0 +1,1 @@
+Please proceed to http://nlp.stanford.edu/data/glove.6B.zip to download the Glove embeddings for the 2nd Question.
